@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/Marc-Moonshot/temporal-guru/api"
 	"github.com/Marc-Moonshot/temporal-guru/db"
 	"github.com/gofiber/fiber/v3"
 )
@@ -14,9 +15,7 @@ func main() {
 
 	app := fiber.New()
 
-	app.Get("/", func(c fiber.Ctx) error {
-		return c.SendString("Hello, World!")
-	})
+	api.RegisterRoutes(app)
 
 	log.Fatal(app.Listen(":8000"))
 }
