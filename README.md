@@ -1,2 +1,2 @@
 # temporal-guru
-syncing service for timescale db.
+syncing service for ~~timescale~~ a normal postreSQL db.
