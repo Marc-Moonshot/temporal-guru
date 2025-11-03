@@ -11,8 +11,8 @@ import (
 // gets cache data from postres
 func Get(conn *pgx.Conn, endpoint string) (*CacheEntry, error) {
 
-	fmt.Printf("GET: %s\n", endpoint)
 	query :=`SELECT * from "CacheEntry" WHERE endpoint = $1`
+	fmt.Printf("query: %s\nendpoint: %s\n", query, endpoint)
 
 	var response CacheEntry
 
