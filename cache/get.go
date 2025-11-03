@@ -26,11 +26,9 @@ func Get(conn *pgx.Conn, endpoint string) (*CacheEntry, error) {
 	)
 
 if err != nil {
-		// Check if no rows were found
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, pgx.ErrNoRows
 		}
-		// For all other errors, wrap them
 		return nil, fmt.Errorf("query failed: %w", err)
 	}
 

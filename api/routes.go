@@ -12,7 +12,6 @@ import (
 // handles API calls routed from nginx
 // calls cache/get
 func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
-
 	app.Get("/nrw/yearly", func(c fiber.Ctx) error {
 		entry, err := cache.Get(conn, "nrw/yearly")
 
@@ -28,7 +27,6 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 			})
 		}
 		return c.Status(fiber.StatusOK).JSON(entry)
-
 	})
 
 	app.Get("/nrw/monthly", func(c fiber.Ctx) error {
