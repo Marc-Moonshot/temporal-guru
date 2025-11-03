@@ -15,7 +15,7 @@ func main() {
 
 	app := fiber.New()
 
-	api.RegisterRoutes(app)
+	api.RegisterRoutes(app, conn)
 
 	log.Fatal(app.Listen(":8000"))
 }
