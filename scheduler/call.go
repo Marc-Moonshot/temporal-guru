@@ -31,7 +31,6 @@ func Call(BaseUrl string, params []string, conn *pgx.Conn) (any, error) {
 		return nil, fmt.Errorf("invalid URL: %w", err)
 	}
 
-	// Example: params slice formatted like []{"key1=value1", "key2=value2"}
 	q := u.Query()
 	for _, p := range params {
 		kv := strings.SplitN(p, "=", 2)
@@ -49,7 +48,7 @@ func Call(BaseUrl string, params []string, conn *pgx.Conn) (any, error) {
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
 
-		fmt.Printf("calling: %s\n", fullUrl)
+		fmt.Printf("[SCHEDULER] calling: %s\n", fullUrl)
 		res, err := client.Do(req)
 		if err != nil {
 			lastErr = fmt.Errorf("attempt %d failed: %w", i+1, err)

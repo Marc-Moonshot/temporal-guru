@@ -12,7 +12,7 @@ import (
 func Get(conn *pgx.Conn, endpoint string) (*CacheEntry, error) {
 
 	query :=`SELECT * from "CacheEntry" WHERE endpoint = $1`
-	fmt.Printf("query: %s\nendpoint: %s\n", query, endpoint)
+	fmt.Printf("-----\nquery: %s\nendpoint: %s\n-----\n", query, endpoint)
 
 	var response CacheEntry
 
