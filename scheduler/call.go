@@ -12,7 +12,11 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Calls an API asynchronously
+type Result struct {
+	Data any
+	Err error
+}
+
 func Call(BaseUrl string, params []string, conn *pgx.Conn) (any, error) {
 	const retries = 3
 	const timeout = 120 * time.Second
@@ -78,4 +82,17 @@ func Call(BaseUrl string, params []string, conn *pgx.Conn) (any, error) {
 	}
 
 	return nil, fmt.Errorf("API call failed after %d retries: %w", retries, lastErr)
+}
+
+// Calls an API asynchronously
+func CallAsync(BaseUrl string, params []string, conn *pgx.Conn) <-chan Result {
+	resultChan := make(chan Result, 1)
+	
+	go func(){
+		data, err := Call(BaseUrl, params, conn)
+		resultChan <- Result{Data: data, Err: err}
+		close(resultChan)
+	}()
+
+	return resultChan
 }
