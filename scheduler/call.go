@@ -1,9 +1,82 @@
 package scheduler
 
-// Calls python API asynchronously
-// Calls cache/set
-func Call(url string, params []string) {
-	const retries = 3
-	const timeout = 120
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
 
+	"github.com/jackc/pgx/v5"
+)
+
+// Calls an API asynchronously
+func Call(BaseUrl string, params []string, conn *pgx.Conn) (any, error) {
+	const retries = 3
+	const timeout = 120 * time.Second
+	const backoff = 2 * time.Second
+
+	client := http.Client{Timeout: timeout}
+
+	var lastErr error
+
+	if BaseUrl == "" {
+		return nil, fmt.Errorf("no provided URL.")
+	}
+
+	u, err := url.Parse(BaseUrl)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL: %w", err)
+	}
+
+	// Example: params slice formatted like []{"key1=value1", "key2=value2"}
+	q := u.Query()
+	for _, p := range params {
+		kv := strings.SplitN(p, "=", 2)
+		if len(kv) == 2 {
+			q.Add(kv[0], kv[1])
+		}
+	}
+	u.RawQuery = q.Encode()
+
+	fullUrl := u.String()
+
+	for i := range retries {
+		req, err := http.NewRequest(http.MethodGet, fullUrl, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+
+		fmt.Printf("calling: %s\n", fullUrl)
+		res, err := client.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("attempt %d failed: %w", i+1, err)
+			time.Sleep(backoff * time.Duration(i+1))
+			continue
+		}
+
+		defer res.Body.Close()
+
+		if res.StatusCode >= 500 {
+			lastErr = fmt.Errorf("server error (status %d) on attempt %d", res.StatusCode, i+1)
+			time.Sleep(backoff * time.Duration(i+1))
+			continue
+		}
+
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read response: %w", err)
+		}
+
+		var data any
+		if err := json.Unmarshal(body, &data); err != nil {
+			return nil, fmt.Errorf("failed to parse JSON: %w", err)
+		}
+
+		return data, nil
+	}
+
+	return nil, fmt.Errorf("API call failed after %d retries: %w", retries, lastErr)
 }
