@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// gets cache data from postres
+// NOTE: gets cache data from postres
 func Get(conn *pgx.Conn, endpoint string) (*CacheEntry, error) {
 
 	query :=`SELECT * from "CacheEntry" WHERE endpoint = $1`
@@ -19,6 +19,7 @@ func Get(conn *pgx.Conn, endpoint string) (*CacheEntry, error) {
 	err := conn.QueryRow(context.Background(), query, endpoint).Scan(
 		&response.Endpoint,
 		&response.Query_params,
+		&response.Params_hash,
 		&response.Response,
 		&response.Fetched_at,
 		&response.Expires_at,
