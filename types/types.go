@@ -9,13 +9,14 @@ import (
 type CacheStatus string
 
 const (
-	StatusValid   CacheStatus = "valid"
-	StatusStale   CacheStatus = "stale"
-	StatusError   CacheStatus = "error"
-	StatusPending CacheStatus = "pending"
+	StatusValid CacheStatus = "valid"
+	StatusStale CacheStatus = "stale"
+	StatusError CacheStatus = "error"
+	// StatusPending CacheStatus = "pending"
 )
 
 type CacheEntry struct {
+	ID           string          `json:"id" db:"id"`
 	Endpoint     string          `json:"endpoint"`
 	Query_params json.RawMessage `json:"query_params"`
 	Query_hash   string          `json:"query_hash"`
@@ -50,13 +51,15 @@ type Response struct {
 }
 
 func (r *Response) UnmarshalJSON(data []byte) error {
+
+  // Parse as map array
 	var arr []map[string]DailyReading
 	if err := json.Unmarshal(data, &arr); err == nil {
 		r.DailyData = arr
 		return nil
 	}
 
-	// Fallback to map format
+	// Fallback to map format if err
 	var obj map[string]MonthlyReading
 	if err := json.Unmarshal(data, &obj); err == nil {
 		r.MonthlyData = obj

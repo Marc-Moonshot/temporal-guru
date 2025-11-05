@@ -1,12 +1,13 @@
 package api
 
 import (
-	"encoding/json"
+	// "encoding/json"
 	"errors"
 	"fmt"
 
 	"github.com/Marc-Moonshot/temporal-guru/cache"
 	"github.com/Marc-Moonshot/temporal-guru/scheduler"
+	"github.com/Marc-Moonshot/temporal-guru/utils"
 	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 )
@@ -32,18 +33,21 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 			})
 		}
 
-		entry, err := cache.Get(conn, "nrw/yearly")
+		fullParams := []string{`year=` + year, `device=` + device}
+
+		paramsHash := utils.HashParams(fullParams)
+		entry, err := cache.Get(conn, "/api/nrw/yearly", paramsHash)
 
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return handleSchedulerCall(c, "http://localhost/api/nrw/yearly", []string{"year=" + year, "device=" + device}, conn)
+				return handleSchedulerCall(c, "/api/nrw/yearly", []string{"year=" + year, "device=" + device}, conn)
 			}
 			fmt.Printf("error: %v\n", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "internal server error",
 			})
 		}
-		return c.Status(fiber.StatusOK).JSON(entry)
+		return c.Status(fiber.StatusOK).JSON(entry.Response)
 	})
 
 	app.Get("/nrw/monthly", func(c fiber.Ctx) error {
@@ -63,19 +67,21 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 				"error": "Missing 'device' parameter",
 			})
 		}
+		fullParams := []string{`month=` + month, `device=` + device}
 
-		entry, err := cache.Get(conn, "nrw/monthly")
+		paramsHash := utils.HashParams(fullParams)
+		entry, err := cache.Get(conn, "/api/nrw/monthly", paramsHash)
 
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return handleSchedulerCall(c, "http://localhost/api/nrw/monthly", []string{"month=" + month, "device=" + device}, conn)
+				return handleSchedulerCall(c, "/api/nrw/monthly", []string{"month=" + month, "device=" + device}, conn)
 			}
 			fmt.Printf("error: %v\n", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "internal server error",
 			})
 		}
-		return c.Status(fiber.StatusOK).JSON(entry)
+		return c.Status(fiber.StatusOK).JSON(entry.Response)
 	})
 
 	app.Get("/nrw/daily", func(c fiber.Ctx) error {
@@ -97,20 +103,22 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 			})
 		}
 
-		entry, err := cache.Get(conn, "nrw/daily")
+		fullParams := []string{`month=` + month, `device=` + device}
+
+		paramsHash := utils.HashParams(fullParams)
+		entry, err := cache.Get(conn, "/api/nrw/daily", paramsHash)
 
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return handleSchedulerCall(c, "http://localhost/api/nrw/daily", []string{"month=" + month, "device=" + device}, conn)
+				return handleSchedulerCall(c, "/api/nrw/daily", []string{"month=" + month, "device=" + device}, conn)
 			}
 			fmt.Printf("error: %v\n", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "internal server error",
 			})
 		}
-		return c.Status(fiber.StatusOK).JSON(entry)
+		return c.Status(fiber.StatusOK).JSON(entry.Response)
 	})
-
 }
 
 func handleSchedulerCall(c fiber.Ctx, url string, params []string, conn *pgx.Conn) error {
@@ -126,9 +134,9 @@ func handleSchedulerCall(c fiber.Ctx, url string, params []string, conn *pgx.Con
 		}
 		fmt.Printf("[API] async call succeeded, caching result.\n")
 
-		formatted, _ := json.MarshalIndent(result.Data, "", " ")
-		fmt.Printf("result: %v\n", string(formatted))
-		cache.Set(conn, url, params, result)
+		// formatted, _ := json.MarshalIndent(result.Data, "", " ")
+		// fmt.Printf("result: %v\n", string(formatted))
+		cache.Set(conn, url, params, result.Data)
 	}()
 
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{

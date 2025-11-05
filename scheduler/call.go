@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -30,7 +31,7 @@ func Call(BaseUrl string, params []string) (types.Response, error) {
 		return types.Response{}, fmt.Errorf("no provided URL.")
 	}
 
-	u, err := url.Parse(BaseUrl)
+	u, err := url.Parse(os.Getenv("PY_API_URL") + BaseUrl)
 	if err != nil {
 		return types.Response{}, fmt.Errorf("invalid URL: %w", err)
 	}

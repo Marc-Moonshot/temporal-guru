@@ -9,15 +9,21 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// NOTE: gets cache data from postres
-func Get(conn *pgx.Conn, endpoint string) (*types.CacheEntry, error) {
+// gets cache data from postres
+func Get(conn *pgx.Conn, endpoint string, queryHash string) (*types.CacheEntry, error) {
 
-	query := `SELECT * from "CacheEntry" WHERE endpoint = $1`
-	fmt.Printf("-----\nquery: %s\nendpoint: %s\n-----\n", query, endpoint)
+	query := `
+    SELECT id, endpoint, query_params, query_hash, response,
+    fetched_at, expires_at, status
+    FROM "CacheEntry"
+    WHERE endpoint = $1 AND query_hash = $2
+    `
+	fmt.Printf("-----\nquery: %s\nendpoint: %s\nquery hash: %s\n-----\n", query, endpoint, queryHash)
 
 	var response types.CacheEntry
 
-	err := conn.QueryRow(context.Background(), query, endpoint).Scan(
+	err := conn.QueryRow(context.Background(), query, endpoint, queryHash).Scan(
+		&response.ID,
 		&response.Endpoint,
 		&response.Query_params,
 		&response.Query_hash,
