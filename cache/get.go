@@ -13,8 +13,7 @@ import (
 func Get(conn *pgx.Conn, endpoint string, queryHash string) (*types.CacheEntry, error) {
 
 	query := `
-    SELECT id, endpoint, query_params, query_hash, response,
-    fetched_at, expires_at, status
+    SELECT response, expires_at, status
     FROM "CacheEntry"
     WHERE endpoint = $1 AND query_hash = $2
     `
@@ -23,12 +22,7 @@ func Get(conn *pgx.Conn, endpoint string, queryHash string) (*types.CacheEntry, 
 	var response types.CacheEntry
 
 	err := conn.QueryRow(context.Background(), query, endpoint, queryHash).Scan(
-		&response.ID,
-		&response.Endpoint,
-		&response.Query_params,
-		&response.Query_hash,
 		&response.Response,
-		&response.Fetched_at,
 		&response.Expires_at,
 		&response.Status,
 	)
