@@ -9,15 +9,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 )
 
 type Result struct {
 	Data any
-	Err error
+	Err  error
 }
 
-func Call(BaseUrl string, params []string, conn *pgx.Conn) (any, error) {
+func Call(BaseUrl string, params []string) (any, error) {
 	const retries = 3
 	const timeout = 120 * time.Second
 	const backoff = 2 * time.Second
@@ -85,11 +84,11 @@ func Call(BaseUrl string, params []string, conn *pgx.Conn) (any, error) {
 }
 
 // Calls an API asynchronously
-func CallAsync(BaseUrl string, params []string, conn *pgx.Conn) <-chan Result {
+func CallAsync(BaseUrl string, params []string) <-chan Result {
 	resultChan := make(chan Result, 1)
-	
-	go func(){
-		data, err := Call(BaseUrl, params, conn)
+
+	go func() {
+		data, err := Call(BaseUrl, params)
 		resultChan <- Result{Data: data, Err: err}
 		close(resultChan)
 	}()

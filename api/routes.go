@@ -35,7 +35,7 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return handleSchedulerCall(c, "http://localhost/api/nrw/yearly", []string{"year=" + year, "device=" + device}, conn)
+				return handleSchedulerCall(c, "http://localhost/api/nrw/yearly", []string{"year=" + year, "device=" + device})
 			}
 			fmt.Printf("error: %v\n", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -67,7 +67,7 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return handleSchedulerCall(c, "http://localhost/api/nrw/monthly", []string{"month=" + month, "device=" + device}, conn)
+				return handleSchedulerCall(c, "http://localhost/api/nrw/monthly", []string{"month=" + month, "device=" + device})
 			}
 			fmt.Printf("error: %v\n", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -100,7 +100,7 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return handleSchedulerCall(c, "http://localhost/api/nrw/daily", []string{"month=" + month, "device=" + device}, conn)
+				return handleSchedulerCall(c, "http://localhost/api/nrw/daily", []string{"month=" + month, "device=" + device})
 			}
 			fmt.Printf("error: %v\n", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -112,23 +112,21 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 
 }
 
-func handleSchedulerCall(c fiber.Ctx, url string, params []string, conn *pgx.Conn) error {
+func handleSchedulerCall(c fiber.Ctx, url string, params []string) error {
 	fmt.Println("Invoking Scheduler.")
-	data, apiErr := scheduler.Call(url, params, conn)
 
-	if apiErr != nil {
-		fmt.Printf("error: %v", apiErr)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Internal Server Error",
-		})
-	}
+	go func() {
+		resultChan := scheduler.CallAsync(url, params)
+		result := <-resultChan
 
-	if data == nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "no cached data found",
-		})
-	}
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"payload": data,
+		if result.Err == nil {
+			fmt.Printf("[SCHEDULER] error: %v", result.Err)
+		}
+		fmt.Printf("[SCHEDULER] async call succeeded, caching result\n")
+	}()
+
+	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+		"message": "Request accepted. Data is being fetched and will be cached shortly.",
+		"status":  "processing",
 	})
 }
