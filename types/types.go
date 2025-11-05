@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -24,7 +25,7 @@ type CacheEntry struct {
 	Status       CacheStatus     `json:"cache_status"`
 }
 
-type StationReading struct {
+type DailyReading struct {
 	BilledCompleted float64 `json:"billed_completed"`
 	BilledEst       float64 `json:"billed_est"`
 	DailyFlow       float64 `json:"daily_flow"`
@@ -34,6 +35,34 @@ type StationReading struct {
 	NrwPercent      float64 `json:"nrw_percent"`
 }
 
-type Response []map[string]StationReading
+type MonthlyReading struct {
+	BilledCompleted string  `json:"billed_completed"`
+	BilledQty       float64 `json:"billed_qty"`
+	DeviceCode      string  `json:"device_code"`
+	NrwM3           float64 `json:"nrw_m3"`
+	NrwPercent      float64 `json:"nrw_percent"`
+	TotalFlow       float64 `json:"total_flow"`
+}
 
+type Response struct {
+	DailyData   []map[string]DailyReading
+	MonthlyData map[string]MonthlyReading
+}
 
+func (r *Response) UnmarshalJSON(data []byte) error {
+	var arr []map[string]DailyReading
+	if err := json.Unmarshal(data, &arr); err == nil {
+		r.DailyData = arr
+		return nil
+	}
+
+	// Fallback to map format
+	var obj map[string]MonthlyReading
+	if err := json.Unmarshal(data, &obj); err == nil {
+		r.MonthlyData = obj
+		return nil
+	}
+
+	// Neither matched
+	return fmt.Errorf("Response: unsupported JSON structure")
+}

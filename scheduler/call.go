@@ -9,16 +9,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Marc-Moonshot/temporal-guru/types"
 )
 
 type Result struct {
-	Data any
+	Data types.Response
 	Err  error
 }
 
-func Call(BaseUrl string, params []string) (any, error) {
+func Call(BaseUrl string, params []string) (types.Response, error) {
 	const retries = 3
-	const timeout = 120 * time.Second
+	const timeout = 300 * time.Second
 	const backoff = 2 * time.Second
 
 	client := http.Client{Timeout: timeout}
@@ -26,12 +27,12 @@ func Call(BaseUrl string, params []string) (any, error) {
 	var lastErr error
 
 	if BaseUrl == "" {
-		return nil, fmt.Errorf("no provided URL.")
+		return types.Response{}, fmt.Errorf("no provided URL.")
 	}
 
 	u, err := url.Parse(BaseUrl)
 	if err != nil {
-		return nil, fmt.Errorf("invalid URL: %w", err)
+		return types.Response{}, fmt.Errorf("invalid URL: %w", err)
 	}
 
 	q := u.Query()
@@ -48,7 +49,7 @@ func Call(BaseUrl string, params []string) (any, error) {
 	for i := range retries {
 		req, err := http.NewRequest(http.MethodGet, fullUrl, nil)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create request: %w", err)
+			return types.Response{}, fmt.Errorf("failed to create request: %w", err)
 		}
 
 		fmt.Printf("[SCHEDULER] calling: %s\n", fullUrl)
@@ -69,18 +70,19 @@ func Call(BaseUrl string, params []string) (any, error) {
 
 		body, err := io.ReadAll(res.Body)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read response: %w", err)
+			return types.Response{}, fmt.Errorf("failed to read response: %w", err)
 		}
 
-		var data any
+		var data types.Response
 		if err := json.Unmarshal(body, &data); err != nil {
-			return nil, fmt.Errorf("failed to parse JSON: %w", err)
+			return types.Response{}, fmt.Errorf("failed to parse JSON: %w", err)
+
 		}
 
 		return data, nil
 	}
 
-	return nil, fmt.Errorf("API call failed after %d retries: %w", retries, lastErr)
+	return types.Response{}, fmt.Errorf("API call failed after %d retries: %w", retries, lastErr)
 }
 
 // Calls an API asynchronously

@@ -5,28 +5,29 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/Marc-Moonshot/temporal-guru/types"
 	"github.com/jackc/pgx/v5"
 )
 
 // NOTE: gets cache data from postres
-func Get(conn *pgx.Conn, endpoint string) (*CacheEntry, error) {
+func Get(conn *pgx.Conn, endpoint string) (*types.CacheEntry, error) {
 
-	query :=`SELECT * from "CacheEntry" WHERE endpoint = $1`
+	query := `SELECT * from "CacheEntry" WHERE endpoint = $1`
 	fmt.Printf("-----\nquery: %s\nendpoint: %s\n-----\n", query, endpoint)
 
-	var response CacheEntry
+	var response types.CacheEntry
 
 	err := conn.QueryRow(context.Background(), query, endpoint).Scan(
 		&response.Endpoint,
 		&response.Query_params,
-		&response.Params_hash,
+		&response.Query_hash,
 		&response.Response,
 		&response.Fetched_at,
 		&response.Expires_at,
 		&response.Status,
 	)
 
-if err != nil {
+	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, pgx.ErrNoRows
 		}

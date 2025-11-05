@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -35,7 +36,7 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return handleSchedulerCall(c, "http://localhost/api/nrw/yearly", []string{"year=" + year, "device=" + device})
+				return handleSchedulerCall(c, "http://localhost/api/nrw/yearly", []string{"year=" + year, "device=" + device}, conn)
 			}
 			fmt.Printf("error: %v\n", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -67,7 +68,7 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return handleSchedulerCall(c, "http://localhost/api/nrw/monthly", []string{"month=" + month, "device=" + device})
+				return handleSchedulerCall(c, "http://localhost/api/nrw/monthly", []string{"month=" + month, "device=" + device}, conn)
 			}
 			fmt.Printf("error: %v\n", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -100,7 +101,7 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return handleSchedulerCall(c, "http://localhost/api/nrw/daily", []string{"month=" + month, "device=" + device})
+				return handleSchedulerCall(c, "http://localhost/api/nrw/daily", []string{"month=" + month, "device=" + device}, conn)
 			}
 			fmt.Printf("error: %v\n", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -112,21 +113,26 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 
 }
 
-func handleSchedulerCall(c fiber.Ctx, url string, params []string) error {
+func handleSchedulerCall(c fiber.Ctx, url string, params []string, conn *pgx.Conn) error {
 	fmt.Println("Invoking Scheduler.")
 
 	go func() {
 		resultChan := scheduler.CallAsync(url, params)
 		result := <-resultChan
 
-		if result.Err == nil {
-			fmt.Printf("[SCHEDULER] error: %v", result.Err)
+		if result.Err != nil {
+			fmt.Printf("[API] error: %v\n", result.Err)
+			return
 		}
-		fmt.Printf("[SCHEDULER] async call succeeded, caching result\n")
+		fmt.Printf("[API] async call succeeded, caching result.\n")
+
+		formatted, _ := json.MarshalIndent(result.Data, "", " ")
+		fmt.Printf("result: %v\n", string(formatted))
+		cache.Set(conn, url, params, result)
 	}()
 
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
-		"message": "Request accepted. Data is being fetched and will be cached shortly.",
-		"status":  "processing",
+		"message": "Request accepted. Data is being fetched and cached.",
+		"status":  "pending",
 	})
 }
