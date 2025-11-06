@@ -4,16 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Marc-Moonshot/temporal-guru/types"
 	"github.com/jackc/pgx/v5"
 )
 
+var ErrResponseExpired = errors.New("response expired")
+
 // gets cache data from postres
 func Get(conn *pgx.Conn, endpoint string, queryHash string) (*types.CacheEntry, error) {
 
 	query := `
-    SELECT response, expires_at, status
+    SELECT id, response, expires_at, status
     FROM "CacheEntry"
     WHERE endpoint = $1 AND query_hash = $2
     `
@@ -22,6 +25,7 @@ func Get(conn *pgx.Conn, endpoint string, queryHash string) (*types.CacheEntry, 
 	var response types.CacheEntry
 
 	err := conn.QueryRow(context.Background(), query, endpoint, queryHash).Scan(
+		&response.ID,
 		&response.Response,
 		&response.Expires_at,
 		&response.Status,
@@ -34,6 +38,9 @@ func Get(conn *pgx.Conn, endpoint string, queryHash string) (*types.CacheEntry, 
 		return nil, fmt.Errorf("query failed: %w", err)
 	}
 
+	if response.Expires_at.Before(time.Now()) {
+		return &response, ErrResponseExpired
+	}
 	return &response, nil
 
 }

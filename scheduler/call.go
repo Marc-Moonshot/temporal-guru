@@ -86,15 +86,3 @@ func Call(BaseUrl string, params []string) (types.Response, error) {
 	return types.Response{}, fmt.Errorf("API call failed after %d retries: %w", retries, lastErr)
 }
 
-// Calls an API asynchronously
-func CallAsync(BaseUrl string, params []string) <-chan Result {
-	resultChan := make(chan Result, 1)
-
-	go func() {
-		data, err := Call(BaseUrl, params)
-		resultChan <- Result{Data: data, Err: err}
-		close(resultChan)
-	}()
-
-	return resultChan
-}

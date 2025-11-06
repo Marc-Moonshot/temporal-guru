@@ -42,11 +42,15 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return handleSchedulerCall(c, "/api/nrw/yearly", []string{"year=" + year, "device=" + device}, conn)
 			}
+
 			fmt.Printf("error: %v\n", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "internal server error",
 			})
 		}
+
+		cache.UpdateOne(entry.ID, conn)
+
 		return c.Status(fiber.StatusOK).JSON(entry.Response)
 	})
 
@@ -81,6 +85,9 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 				"error": "internal server error",
 			})
 		}
+
+		cache.UpdateOne(entry.ID, conn)
+
 		return c.Status(fiber.StatusOK).JSON(entry.Response)
 	})
 
@@ -109,7 +116,7 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 		entry, err := cache.Get(conn, "/api/nrw/daily", paramsHash)
 
 		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
+			if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, cache.ErrResponseExpired) {
 				return handleSchedulerCall(c, "/api/nrw/daily", []string{"month=" + month, "device=" + device}, conn)
 			}
 			fmt.Printf("error: %v\n", err)
@@ -117,26 +124,32 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 				"error": "internal server error",
 			})
 		}
+
+		cache.UpdateOne(entry.ID, conn)
+
 		return c.Status(fiber.StatusOK).JSON(entry.Response)
 	})
 }
 
+// opens a go routine that handles long API calls
 func handleSchedulerCall(c fiber.Ctx, url string, params []string, conn *pgx.Conn) error {
 	fmt.Println("Invoking Scheduler.")
 
 	go func() {
-		resultChan := scheduler.CallAsync(url, params)
-		result := <-resultChan
-
-		if result.Err != nil {
-			fmt.Printf("[API] error: %v\n", result.Err)
+		data, err := scheduler.Call(url, params)
+		if err != nil {
+			fmt.Printf("[API] scheduler call failed: %v\n", err)
 			return
 		}
+
 		fmt.Printf("[API] async call succeeded, caching result.\n")
 
-		// formatted, _ := json.MarshalIndent(result.Data, "", " ")
-		// fmt.Printf("result: %v\n", string(formatted))
-		cache.Set(conn, url, params, result.Data)
+		if err := cache.Set(conn, url, params, data); err != nil {
+			fmt.Printf("[API] cache.Set failed: %v\n", err)
+			return
+		}
+
+		fmt.Printf("[API] result cached successfully.\n")
 	}()
 
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
