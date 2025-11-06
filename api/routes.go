@@ -4,6 +4,7 @@ import (
 	// "encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Marc-Moonshot/temporal-guru/cache"
 	"github.com/Marc-Moonshot/temporal-guru/scheduler"
@@ -49,7 +50,8 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 			})
 		}
 
-		cache.UpdateOne(entry.ID, conn)
+		updatedAt := time.Now()
+		cache.UpdateOne(entry.ID, "updated_at", updatedAt, conn)
 
 		return c.Status(fiber.StatusOK).JSON(entry.Response)
 	})
@@ -86,7 +88,8 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 			})
 		}
 
-		cache.UpdateOne(entry.ID, conn)
+		updatedAt := time.Now()
+		cache.UpdateOne(entry.ID, "updated_at", updatedAt, conn)
 
 		return c.Status(fiber.StatusOK).JSON(entry.Response)
 	})
@@ -125,7 +128,8 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 			})
 		}
 
-		cache.UpdateOne(entry.ID, conn)
+		updatedAt := time.Now()
+		cache.UpdateOne(entry.ID, "updated_at", updatedAt, conn)
 
 		return c.Status(fiber.StatusOK).JSON(entry.Response)
 	})
