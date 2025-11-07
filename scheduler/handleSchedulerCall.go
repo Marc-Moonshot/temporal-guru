@@ -19,14 +19,22 @@ func HandleSchedulerCall(url string, params []string, pool *pgxpool.Pool, exists
 	}
 
 	go func() {
-		// TODO: TEST: set document to pending here
+		// TEST: set row to pending here
 		if exists && id != nil {
 			if _, updateStatusPendingErr := cache.UpdateOne(*id, "status", "pending", pool); updateStatusPendingErr != nil {
-				fmt.Printf("[SCHEDULER] update status to 'stale' failed: %v\n", updateStatusPendingErr)
+				fmt.Printf("[SCHEDULER] update status to 'pending' failed: %v\n", updateStatusPendingErr)
 			}
 		}
+
 		data, err := Call(url, params)
 		if err != nil {
+			if exists && id != nil {
+				// TEST: set row to error
+				if _, updateStatusErrorErr := cache.UpdateOne(*id, "status", "error", pool); updateStatusErrorErr != nil {
+					fmt.Printf("[SCHEDULER] update status to 'error' failed: %v\n", updateStatusErrorErr)
+				}
+			}
+
 			fmt.Printf("[SCHEDULER] scheduler call failed: %v\n", err)
 			return
 		}
@@ -41,6 +49,11 @@ func HandleSchedulerCall(url string, params []string, pool *pgxpool.Pool, exists
 		} else if id != nil {
 
 			if _, err := cache.UpdateResponse(*id, data, pool); err != nil {
+				// TEST: set row to error
+				if _, updateStatusErrorErr := cache.UpdateOne(*id, "status", "error", pool); updateStatusErrorErr != nil {
+					fmt.Printf("[SCHEDULER] update status to 'error' failed: %v\n", updateStatusErrorErr)
+				}
+
 				fmt.Printf("[SCHEDULER] Update response failed: %v\n", err)
 				return
 			}
