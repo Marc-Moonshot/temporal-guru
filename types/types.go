@@ -9,10 +9,10 @@ import (
 type CacheStatus string
 
 const (
-	StatusValid CacheStatus = "valid"
-	StatusStale CacheStatus = "stale"
-	StatusError CacheStatus = "error"
-	// StatusPending CacheStatus = "pending"
+	StatusValid      CacheStatus = "valid"
+	StatusStale      CacheStatus = "stale"
+	StatusError      CacheStatus = "error"
+	StatusProcessing CacheStatus = "processing"
 )
 
 type CacheEntry struct {
@@ -36,6 +36,7 @@ type DailyReading struct {
 	NrwPercent      float64 `json:"nrw_percent"`
 }
 
+// yearly readings have the same shape as monthly.
 type MonthlyReading struct {
 	BilledCompleted string  `json:"billed_completed"`
 	BilledQty       float64 `json:"billed_qty"`
@@ -52,20 +53,20 @@ type Response struct {
 
 func (r *Response) UnmarshalJSON(data []byte) error {
 
-  // Parse as map array
+	// parse as map array
 	var arr []map[string]DailyReading
 	if err := json.Unmarshal(data, &arr); err == nil {
 		r.DailyData = arr
 		return nil
 	}
 
-	// Fallback to map format if err
+	// fallback to map format if err
 	var obj map[string]MonthlyReading
 	if err := json.Unmarshal(data, &obj); err == nil {
 		r.MonthlyData = obj
 		return nil
 	}
 
-	// Neither matched
+	// neither matched
 	return fmt.Errorf("Response: unsupported JSON structure")
 }
