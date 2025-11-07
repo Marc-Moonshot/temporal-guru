@@ -8,11 +8,12 @@ import (
 
 	"github.com/Marc-Moonshot/temporal-guru/types"
 	"github.com/Marc-Moonshot/temporal-guru/utils"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // sets cache data in postgres
-func Set(conn *pgx.Conn, url string, params []string, response types.Response) error {
+func Set(pool *pgxpool.Pool, url string, params []string, response types.Response) (pgconn.CommandTag, error) {
 
 	query := `INSERT INTO public."CacheEntry"
     (endpoint, query_params, query_hash, response, fetched_at, expires_at, status)
@@ -34,12 +35,12 @@ func Set(conn *pgx.Conn, url string, params []string, response types.Response) e
 	entry.Query_params, _ = json.Marshal(params)
 	entry.Response, _ = json.Marshal(response)
 
-	responseStatus, err := conn.Exec(context.Background(), query, entry.Endpoint, entry.Query_params, entry.Query_hash, entry.Response, entry.Fetched_at,
+	commandTag, err := pool.Exec(context.Background(), query, entry.Endpoint, entry.Query_params, entry.Query_hash, entry.Response, entry.Fetched_at,
 		entry.Expires_at, entry.Status)
 
-	fmt.Printf("Response Status: %v", responseStatus)
+	fmt.Printf("[CACHE] tag: %v\n", commandTag)
 	if err != nil {
-		return fmt.Errorf("[CACHE] error: %w", err)
+		return pgconn.CommandTag{}, fmt.Errorf("[CACHE] error: %w", err)
 	}
-	return nil
+	return commandTag, nil
 }

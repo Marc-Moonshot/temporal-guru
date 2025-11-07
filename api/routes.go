@@ -11,10 +11,11 @@ import (
 	"github.com/Marc-Moonshot/temporal-guru/utils"
 	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Handles API calls routed from nginx
-func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
+func RegisterRoutes(app *fiber.App, pool *pgxpool.Pool) {
 
 	app.Get("/nrw/yearly", func(c fiber.Ctx) error {
 		fmt.Println("[API] GET /nrw/yearly")
@@ -37,11 +38,25 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 		fullParams := []string{`year=` + year, `device=` + device}
 
 		paramsHash := utils.HashParams(fullParams)
-		entry, err := cache.Get(conn, "/api/nrw/yearly", paramsHash)
+		entry, err := cache.Get(pool, "/api/nrw/yearly", paramsHash)
 
+		cacheExpired := errors.Is(err, cache.ErrResponseExpired)
 		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return handleSchedulerCall(c, "/api/nrw/yearly", []string{"year=" + year, "device=" + device}, conn)
+			if errors.Is(err, pgx.ErrNoRows) || cacheExpired {
+				var idPtr *string
+				if cacheExpired {
+					idPtr = &entry.ID
+				}
+
+				scheduler.HandleSchedulerCall("/api/nrw/yearly", []string{"year=" + year, "device=" + device}, pool, cacheExpired, idPtr)
+
+				if cacheExpired {
+					return c.Status(fiber.StatusOK).JSON(entry.Response)
+				} else {
+					return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+						"message": "Request accepted. Data is being fetched and cached.",
+					})
+				}
 			}
 
 			fmt.Printf("error: %v\n", err)
@@ -50,8 +65,10 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 			})
 		}
 
-		updatedAt := time.Now()
-		cache.UpdateOne(entry.ID, "updated_at", updatedAt, conn)
+		fetchedAt := time.Now()
+		if _, updateErr := cache.UpdateOne(entry.ID, "fetched_at", fetchedAt, pool); updateErr != nil {
+			fmt.Printf("[API] update error: %v", updateErr)
+		}
 
 		return c.Status(fiber.StatusOK).JSON(entry.Response)
 	})
@@ -76,11 +93,24 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 		fullParams := []string{`month=` + month, `device=` + device}
 
 		paramsHash := utils.HashParams(fullParams)
-		entry, err := cache.Get(conn, "/api/nrw/monthly", paramsHash)
+		entry, err := cache.Get(pool, "/api/nrw/monthly", paramsHash)
 
+		cacheExpired := errors.Is(err, cache.ErrResponseExpired)
 		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return handleSchedulerCall(c, "/api/nrw/monthly", []string{"month=" + month, "device=" + device}, conn)
+			if errors.Is(err, pgx.ErrNoRows) || cacheExpired {
+				var idPtr *string
+				if cacheExpired {
+					idPtr = &entry.ID
+				}
+				scheduler.HandleSchedulerCall("/api/nrw/monthly", []string{"month=" + month, "device=" + device}, pool, cacheExpired, idPtr)
+
+				if cacheExpired {
+					return c.Status(fiber.StatusOK).JSON(entry.Response)
+				} else {
+					return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+						"message": "Request accepted. Data is being fetched and cached.",
+					})
+				}
 			}
 			fmt.Printf("error: %v\n", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -88,8 +118,10 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 			})
 		}
 
-		updatedAt := time.Now()
-		cache.UpdateOne(entry.ID, "updated_at", updatedAt, conn)
+		fetchedAt := time.Now()
+		if _, updateErr := cache.UpdateOne(entry.ID, "fetched_at", fetchedAt, pool); updateErr != nil {
+			fmt.Printf("[API] update error: %v", updateErr)
+		}
 
 		return c.Status(fiber.StatusOK).JSON(entry.Response)
 	})
@@ -116,11 +148,28 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 		fullParams := []string{`month=` + month, `device=` + device}
 
 		paramsHash := utils.HashParams(fullParams)
-		entry, err := cache.Get(conn, "/api/nrw/daily", paramsHash)
+		entry, err := cache.Get(pool, "/api/nrw/daily", paramsHash)
 
+		cacheExpired := errors.Is(err, cache.ErrResponseExpired)
 		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, cache.ErrResponseExpired) {
-				return handleSchedulerCall(c, "/api/nrw/daily", []string{"month=" + month, "device=" + device}, conn)
+			if errors.Is(err, pgx.ErrNoRows) || cacheExpired {
+				var idPtr *string
+				if cacheExpired {
+					idPtr = &entry.ID
+				}
+
+				// TODO: TEST: check entry state first, if already pending, skip
+				if entry.Status != "pending" {
+					scheduler.HandleSchedulerCall("/api/nrw/daily", []string{"month=" + month, "device=" + device}, pool, cacheExpired, idPtr)
+				}
+
+				if cacheExpired {
+					return c.Status(fiber.StatusOK).JSON(entry.Response)
+				} else {
+					return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+						"message": "Request accepted. Data is being fetched and cached.",
+					})
+				}
 			}
 			fmt.Printf("error: %v\n", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -128,36 +177,15 @@ func RegisterRoutes(app *fiber.App, conn *pgx.Conn) {
 			})
 		}
 
-		updatedAt := time.Now()
-		cache.UpdateOne(entry.ID, "updated_at", updatedAt, conn)
-
+		fetchedAt := time.Now()
+		if _, updateErr := cache.UpdateOne(entry.ID, "fetched_at", fetchedAt, pool); updateErr != nil {
+			fmt.Printf("[API] update error: %v", updateErr)
+		}
 		return c.Status(fiber.StatusOK).JSON(entry.Response)
 	})
-}
 
-// opens a go routine that handles long API calls
-func handleSchedulerCall(c fiber.Ctx, url string, params []string, conn *pgx.Conn) error {
-	fmt.Println("Invoking Scheduler.")
-
-	go func() {
-		data, err := scheduler.Call(url, params)
-		if err != nil {
-			fmt.Printf("[API] scheduler call failed: %v\n", err)
-			return
-		}
-
-		fmt.Printf("[API] async call succeeded, caching result.\n")
-
-		if err := cache.Set(conn, url, params, data); err != nil {
-			fmt.Printf("[API] cache.Set failed: %v\n", err)
-			return
-		}
-
-		fmt.Printf("[API] result cached successfully.\n")
-	}()
-
-	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
-		"message": "Request accepted. Data is being fetched and cached.",
-		"status":  "pending",
-	})
+	// TODO: route for checking a resource's status
+	// app.Get("/status/{route}", func(c fiber.Ctx) error {
+	//
+	// })
 }

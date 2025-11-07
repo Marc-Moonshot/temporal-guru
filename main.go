@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 
 	"github.com/Marc-Moonshot/temporal-guru/api"
@@ -10,12 +9,11 @@ import (
 )
 
 func main() {
-	conn := db.Connect()
-	defer conn.Close(context.Background())
-
+	pool := db.Connect()
+	defer pool.Close()
 	app := fiber.New()
 
-	api.RegisterRoutes(app, conn)
+	api.RegisterRoutes(app, pool)
 
 	log.Fatal(app.Listen(":8000"))
 
