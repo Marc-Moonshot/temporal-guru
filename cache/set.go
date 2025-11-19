@@ -13,13 +13,13 @@ import (
 )
 
 // sets cache data in postgres
-func Set(pool *pgxpool.Pool, url string, params []string, response types.Response) (pgconn.CommandTag, error) {
+func Set(pool *pgxpool.Pool, url string, params []string, response *types.Response, status types.CacheStatus) (pgconn.CommandTag, error) {
 
-	query := `INSERT INTO public."CacheEntry"
+	query := `INSERT INTO "CacheEntry"
     (endpoint, query_params, query_hash, response, fetched_at, expires_at, status)
     VALUES($1, $2, $3, $4, $5, $6, $7)`
 
-	fmt.Printf("-----\nquery: %s\nendpoint: %s\nparams: %s\nresponse: %v\n-----\n", query, url, params, response)
+	fmt.Printf("-----\n[CACHE]\nquery: %s\nendpoint: %s\nparams: %s\nresponse: %v\n-----\n", query, url, params, response)
 
 	now := time.Now().UTC()
 	expires := now.Add(6 * time.Hour)
@@ -28,7 +28,7 @@ func Set(pool *pgxpool.Pool, url string, params []string, response types.Respons
 		Endpoint:   url,
 		Fetched_at: now,
 		Expires_at: expires,
-		Status:     "valid",
+		Status:     status,
 		Query_hash: utils.HashParams(params),
 	}
 

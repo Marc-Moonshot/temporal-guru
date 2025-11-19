@@ -21,7 +21,7 @@ func Get(pool *pgxpool.Pool, endpoint string, queryHash string) (*types.CacheEnt
     FROM "CacheEntry"
     WHERE endpoint = $1 AND query_hash = $2
     `
-	fmt.Printf("-----\nquery: %s\nendpoint: %s\nquery hash: %s\n", query, endpoint, queryHash)
+	fmt.Printf("-----\n[CACHE]\nquery: %s\nendpoint: %s\nquery hash: %s\n", query, endpoint, queryHash)
 
 	var response types.CacheEntry
 
@@ -34,7 +34,7 @@ func Get(pool *pgxpool.Pool, endpoint string, queryHash string) (*types.CacheEnt
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			fmt.Println("No entry found.\n-----")
+			fmt.Println("[CACHE]No entry found.\n-----")
 			return nil, pgx.ErrNoRows
 		}
 		return nil, fmt.Errorf("query failed: %w", err)

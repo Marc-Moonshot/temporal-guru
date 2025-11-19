@@ -8,19 +8,12 @@ import (
 )
 
 // opens a go routine that calls the python API and inserts or updates a response
-// TODO: wrap all this into a single transaction.
-func HandleSchedulerCall(url string, params []string, pool *pgxpool.Pool, exists bool, id *string) {
+func HandleSchedulerCall(url string, params []string, pool *pgxpool.Pool, id *string) {
 	fmt.Println("Invoking Scheduler.")
-
-	if exists && id != nil {
-		if _, updateStatusStaleErr := cache.UpdateOne(*id, "status", "stale", pool); updateStatusStaleErr != nil {
-			fmt.Printf("[SCHEDULER] update status to 'stale' failed: %v\n", updateStatusStaleErr)
-		}
-	}
 
 	go func() {
 		// TEST: set row to pending here
-		if exists && id != nil {
+		if id != nil {
 			if _, updateStatusPendingErr := cache.UpdateOne(*id, "status", "pending", pool); updateStatusPendingErr != nil {
 				fmt.Printf("[SCHEDULER] update status to 'pending' failed: %v\n", updateStatusPendingErr)
 			}
@@ -28,7 +21,7 @@ func HandleSchedulerCall(url string, params []string, pool *pgxpool.Pool, exists
 
 		data, err := Call(url, params)
 		if err != nil {
-			if exists && id != nil {
+			if id != nil {
 				// TEST: set row to error
 				if _, updateStatusErrorErr := cache.UpdateOne(*id, "status", "error", pool); updateStatusErrorErr != nil {
 					fmt.Printf("[SCHEDULER] update status to 'error' failed: %v\n", updateStatusErrorErr)
@@ -41,13 +34,7 @@ func HandleSchedulerCall(url string, params []string, pool *pgxpool.Pool, exists
 
 		fmt.Printf("[SCHEDULER] async call succeeded, caching result.\n")
 
-		if !exists {
-			if _, err := cache.Set(pool, url, params, data); err != nil {
-				fmt.Printf("[SCHEDULER] cache.Set failed: %v\n", err)
-				return
-			}
-		} else if id != nil {
-
+		if id != nil {
 			if _, err := cache.UpdateResponse(*id, data, pool); err != nil {
 				// TEST: set row to error
 				if _, updateStatusErrorErr := cache.UpdateOne(*id, "status", "error", pool); updateStatusErrorErr != nil {
