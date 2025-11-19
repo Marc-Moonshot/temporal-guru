@@ -2,7 +2,7 @@ CREATE SCHEMA IF NOT EXISTS cache_data;
 
 CREATE TYPE cache_data.status AS ENUM ('valid', 'stale', 'error', 'pending');
 
-CREATE TABLE cache_data.cache_entries (
+CREATE TABLE cache_data.cacheEntry (
     id BIGSERIAL  PRIMARY KEY,  
     endpoint      TEXT NOT NULL,
     query_params  JSONB,
