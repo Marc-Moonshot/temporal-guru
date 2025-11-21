@@ -1,4 +1,4 @@
-FROM golang:1.23-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /sync-service
 
@@ -14,7 +14,7 @@ FROM alpine:latest
 
 WORKDIR /sync-service
 
-COPY --from=builder /app/main .
+COPY --from=builder /sync-service/main .
 
 EXPOSE 9000
 
