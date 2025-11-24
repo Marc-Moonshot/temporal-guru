@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -31,7 +32,18 @@ func Call(BaseUrl string, params []string) (types.Response, error) {
 		return types.Response{}, fmt.Errorf("no provided URL.")
 	}
 
-	u, err := url.Parse(os.Getenv("PY_API_URL") + BaseUrl)
+	environment := os.Getenv("environment")
+
+	if environment == "" {
+    log.Fatal("environment not set.")
+	}
+
+	pyApiUrlEnvString := "PY_API_URL"
+	if environment == "development" {
+		pyApiUrlEnvString = "DEV_PY_API_URL"
+	}
+
+	u, err := url.Parse(os.Getenv(pyApiUrlEnvString) + BaseUrl)
 	if err != nil {
 		return types.Response{}, fmt.Errorf("invalid URL: %w", err)
 	}
@@ -77,7 +89,6 @@ func Call(BaseUrl string, params []string) (types.Response, error) {
 		var data types.Response
 		if err := json.Unmarshal(body, &data); err != nil {
 			return types.Response{}, fmt.Errorf("failed to parse JSON: %w", err)
-
 		}
 
 		return data, nil
@@ -85,4 +96,3 @@ func Call(BaseUrl string, params []string) (types.Response, error) {
 
 	return types.Response{}, fmt.Errorf("API call failed after %d retries: %w", retries, lastErr)
 }
-

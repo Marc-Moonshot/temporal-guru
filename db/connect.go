@@ -16,10 +16,22 @@ func Connect() *pgxpool.Pool {
 		log.Println("Warning: .env file not found. using system environment variables.")
 	}
 
-	dbUrl := os.Getenv("DB_URL")
+	environment := os.Getenv("environment")
+
+	if environment == "" {
+		log.Fatal("environment not set.")
+	}
+
+	var dbUrl string
+	dbUrlEnvString := "DB_URL"
+	if environment == "development" {
+		dbUrlEnvString = "DEV_DB_URL"
+	}
+
+	dbUrl = os.Getenv(dbUrlEnvString)
 
 	if dbUrl == "" {
-		log.Fatal("DB_URL not set.")
+		log.Fatalf("%s not set.", dbUrlEnvString)
 	}
 
 	// conn, err := pgx.Connect(context.Background(), dbUrl)

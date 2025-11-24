@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
 	"github.com/Marc-Moonshot/temporal-guru/cache"
 	"github.com/Marc-Moonshot/temporal-guru/scheduler"
 	"github.com/Marc-Moonshot/temporal-guru/utils"
@@ -31,7 +30,7 @@ func RegisterRoutes(app *fiber.App, pool *pgxpool.Pool) {
 
 		if device == "" {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Missing 'device' parameter",
+	"error": "Missing 'device' parameter",
 			})
 		}
 
