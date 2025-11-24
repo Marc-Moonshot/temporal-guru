@@ -15,7 +15,7 @@ import (
 // sets cache data in postgres
 func Set(pool *pgxpool.Pool, url string, params []string, response *types.Response, status types.CacheStatus) (pgconn.CommandTag, error) {
 
-	query := `INSERT INTO "CacheEntry"
+	query := `INSERT INTO "cacheentry"
     (endpoint, query_params, query_hash, response, fetched_at, expires_at, status)
     VALUES($1, $2, $3, $4, $5, $6, $7)`
 

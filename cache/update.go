@@ -20,7 +20,7 @@ func UpdateOne(id string, field string, value any, pool *pgxpool.Pool) (pgconn.C
 	// 	return pgconn.CommandTag{}, fmt.Errorf("[CACHE] invalid field name: %s", field)
 	// }
 
-	query := fmt.Sprintf(`UPDATE "CacheEntry" SET %s=$1 WHERE id=$2`, field)
+	query := fmt.Sprintf(`UPDATE "cacheentry" SET %s=$1 WHERE id=$2`, field)
 
 	fmt.Printf("-----\n[CACHE]\nquery: %s\n%s: %s\nID: %s\n-----\n", query, field, value, id)
 
@@ -35,7 +35,7 @@ func UpdateOne(id string, field string, value any, pool *pgxpool.Pool) (pgconn.C
 }
 
 func UpdateResponse(id string, response types.Response, pool *pgxpool.Pool) (pgconn.CommandTag, error) {
-	query := `UPDATE "CacheEntry" SET response=$1, expires_at=$2 WHERE id=$3`
+	query := `UPDATE "cacheentry" SET response=$1, expires_at=$2 WHERE id=$3`
 
 	expires_at := time.Now().Add(time.Hour * 6)
 	fmt.Printf("-----\n[CACHE]\nquery: %s\nresponse: %v\nexpires_at: %s\nID: %s\n-----\n", query, response, expires_at, id)

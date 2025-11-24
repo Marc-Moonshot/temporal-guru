@@ -18,7 +18,7 @@ func Get(pool *pgxpool.Pool, endpoint string, queryHash string) (*types.CacheEnt
 
 	query := `
     SELECT id, response, expires_at, status
-    FROM "CacheEntry"
+    FROM "cacheentry"
     WHERE endpoint = $1 AND query_hash = $2
     `
 	fmt.Printf("-----\n[CACHE]\nquery: %s\nendpoint: %s\nquery hash: %s\n", query, endpoint, queryHash)
