@@ -81,7 +81,20 @@ func RegisterRoutes(app *fiber.App, pool *pgxpool.Pool) {
 
 		if entry.Status == "pending" {
 			return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
-				"message": "Request accepted. Data is being fetched and cached.",
+				"message": "Request accepted. Data is currently being fetched.",
+			})
+		}
+
+		if entry.Status == "error" {
+			updatedEntry, err := cache.Get(pool, "/nrw/yearly", paramsHash)
+
+			if err != nil {
+				fmt.Printf("[API] cache.Get failed: %v\n", err)
+			}
+
+			scheduler.HandleSchedulerCall("/nrw/yearly", []string{"year=" + year, "device=" + device}, pool, &updatedEntry.ID)
+			return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+				"message": "Request accepted. Data is being revalidated.",
 			})
 		}
 
@@ -151,7 +164,20 @@ func RegisterRoutes(app *fiber.App, pool *pgxpool.Pool) {
 
 		if entry.Status == "pending" {
 			return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
-				"message": "Request accepted. Data is being fetched and cached.",
+				"message": "Request accepted. Data is currently being fetched.",
+			})
+		}
+
+		if entry.Status == "error" {
+			updatedEntry, err := cache.Get(pool, "/nrw/monthly", paramsHash)
+
+			if err != nil {
+				fmt.Printf("[API] cache.Get failed: %v\n", err)
+			}
+
+			scheduler.HandleSchedulerCall("/nrw/monthly", []string{"month=" + month, "device=" + device}, pool, &updatedEntry.ID)
+			return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+				"message": "Request accepted. Data is being revalidated.",
 			})
 		}
 
@@ -223,14 +249,26 @@ func RegisterRoutes(app *fiber.App, pool *pgxpool.Pool) {
 
 		if entry.Status == "pending" {
 			return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
-				"message": "Request accepted. Data is being fetched and cached.",
+				"message": "Request accepted. Data is currently being fetched.",
+			})
+		}
+
+		if entry.Status == "error" {
+			updatedEntry, err := cache.Get(pool, "/nrw/daily", paramsHash)
+
+			if err != nil {
+				fmt.Printf("[API] cache.Get failed: %v\n", err)
+			}
+
+			scheduler.HandleSchedulerCall("/nrw/daily", []string{"month=" + month, "device=" + device}, pool, &updatedEntry.ID)
+			return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+				"message": "Request accepted. Data is being revalidated.",
 			})
 		}
 
 		return c.Status(fiber.StatusOK).JSON(entry.Response)
 	})
 
-	// TODO: route for checking a resource's status
 	app.Get("/status/*", func(c fiber.Ctx) error {
 
 		endpoint := fmt.Sprintf("/%s", c.Params("*"))
